@@ -2,12 +2,30 @@ from __future__ import annotations
 
 import os
 import random
+import json
 from collections import defaultdict
 from importlib.resources import files
 
 import jieba
 import torch
-from pypinyin import Style, lazy_pinyin
+from pypinyin import Style, lazy_pinyin, load_phrases_dict
+
+_polyphone_loaded = False
+
+
+def _load_polyphone_dict():
+    """Load custom polyphone dictionary once."""
+    global _polyphone_loaded
+    if _polyphone_loaded:
+        return
+    dict_path = os.path.join(files("f5_tts").joinpath("../../data"), "polyphone_dict.json")
+    if os.path.exists(dict_path):
+        with open(dict_path, "r", encoding="utf-8") as f:
+            mapping = json.load(f)
+        phrases = {k: [[p] for p in v.split()] for k, v in mapping.items()}
+        if phrases:
+            load_phrases_dict(phrases)
+    _polyphone_loaded = True
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -137,6 +155,7 @@ def convert_char_to_pinyin(text_list, polyphone=True):
     if jieba.dt.initialized is False:
         jieba.default_logger.setLevel(50)  # CRITICAL
         jieba.initialize()
+    _load_polyphone_dict()
 
     final_text_list = []
     custom_trans = str.maketrans(

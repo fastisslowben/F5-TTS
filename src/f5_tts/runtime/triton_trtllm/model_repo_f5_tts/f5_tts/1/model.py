@@ -25,6 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import json
 import os
+from importlib.resources import files
 
 import jieba
 import torch
@@ -32,9 +33,26 @@ import torch.nn.functional as F
 import torchaudio
 import triton_python_backend_utils as pb_utils
 from f5_tts_trtllm import F5TTS
-from pypinyin import Style, lazy_pinyin
+from pypinyin import Style, lazy_pinyin, load_phrases_dict
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.dlpack import from_dlpack, to_dlpack
+
+_polyphone_loaded = False
+
+
+def _load_polyphone_dict() -> None:
+    """Load custom polyphone dictionary once for Triton model."""
+    global _polyphone_loaded
+    if _polyphone_loaded:
+        return
+    dict_path = os.path.join(files("f5_tts").joinpath("../../data"), "polyphone_dict.json")
+    if os.path.exists(dict_path):
+        with open(dict_path, "r", encoding="utf-8") as f:
+            mapping = json.load(f)
+        phrases = {k: [[p] for p in v.split()] for k, v in mapping.items()}
+        if phrases:
+            load_phrases_dict(phrases)
+    _polyphone_loaded = True
 
 
 def get_tokenizer(vocab_file_path: str):
@@ -56,6 +74,7 @@ def get_tokenizer(vocab_file_path: str):
 
 
 def convert_char_to_pinyin(reference_target_texts_list, polyphone=True):
+    _load_polyphone_dict()
     final_reference_target_texts_list = []
     custom_trans = str.maketrans(
         {";": ",", "“": '"', "”": '"', "‘": "'", "’": "'"}

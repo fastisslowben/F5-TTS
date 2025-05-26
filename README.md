@@ -213,6 +213,19 @@ Read [training & finetuning guidance](src/f5_tts/train) for more instructions.
 
 ## [Evaluation](src/f5_tts/eval)
 
+## Custom Polyphone Dictionary
+
+The TTS pipeline can load a user-defined polyphone dictionary stored at `data/polyphone_dict.json`. Each key is a Chinese phrase and the value is its pinyin string:
+
+```json
+{
+    "美的": "mei2 di2"
+}
+```
+
+The dictionary is loaded once on first use. Extend it by adding more mappings in the same format.
+
+
 
 ## Development
 
